@@ -99,7 +99,6 @@ public:
       wxString GetShortDescription();
       wxString GetLongDescription();
 
-      //void OnTimer(wxTimerEvent& event);
       void Notify();
 
       void SetNMEASentence(wxString &sentence);
@@ -112,7 +111,6 @@ private:
 
       void WriteLogEntry( wxString entry );
 
-      wxTimer           m_timer;
       wxFileConfig     *m_pconfig;
       wxString          m_filename;
       int               m_interval;
@@ -121,7 +119,6 @@ private:
       short             mPriPosition, mPriCOGSOG, mPriHeadingM, mPriHeadingT, mPriVar, mPriDateTime, mPriWindR, mPriWindT, mPriDepth;
       LogbookItem       mLat, mLon, mCOG, mSOG, mHeadingM, mHeadingT, mSTW, mAWA, mAWS, mTWA, mTWS, mDepth, mTemp, mVar;
 
-//DECLARE_EVENT_TABLE();
 };
 
 class LogbookPreferencesDialog : public wxDialog
