@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id: logbook_pi.h, v0.1 2011/03/18 SethDart Exp $
+ * $Id: logbook_pi.h, v0.2 2011-05-06 SethDart Exp $
  *
  * Project:  OpenCPN
  * Purpose:  Logbook Plugin
@@ -36,11 +36,12 @@
 #endif //precompiled headers
 
 #define     PLUGIN_VERSION_MAJOR    0
-#define     PLUGIN_VERSION_MINOR    1
+#define     PLUGIN_VERSION_MINOR    2
 
 #define     MY_API_VERSION_MAJOR    1
 #define     MY_API_VERSION_MINOR    5
 
+#include <wx/aui/aui.h>
 #include <wx/fileconf.h>
 #include <wx/filepicker.h>
 #include <wx/spinctrl.h>
@@ -51,6 +52,7 @@
 // Data must be fresher thant this delay to be saved
 #define     DATA_VALIDITY    60
 #define     LOGBOOK_EMPTY_VALUE    999.
+#define     LOGBOOK_TOOL_POSITION -1          // Request default positioning of toolbar tool
 
 //----------------------------------------------------------------------------------------------------------
 //    The PlugIn Class Definition
@@ -63,6 +65,8 @@ enum
       OCPN_LBI_MAX,
       OCPN_LBI_AVG
 };
+
+class LogbookUserInput;
 
 class LogbookItem
 {
@@ -98,8 +102,14 @@ public:
       wxString GetCommonName();
       wxString GetShortDescription();
       wxString GetLongDescription();
+      int GetToolbarToolCount(void);
+      void OnToolbarToolCallback(int id);
 
+      void SetColorScheme( PI_ColorScheme cs );
+
+      void SetNote( wxString note );
       void Notify();
+      void CloseUserInput();
 
       void SetNMEASentence(wxString &sentence);
       void ShowPreferencesDialog( wxWindow* parent );
@@ -112,12 +122,16 @@ private:
       void WriteLogEntry( wxString entry );
 
       wxFileConfig     *m_pconfig;
+      wxAuiManager     *m_pauimgr;
+      int               m_toolbar_item_id;
+      LogbookUserInput *m_puserinput;
       wxString          m_filename;
       int               m_interval;
 
       NMEA0183          m_NMEA0183;                 // Used to parse NMEA Sentences
       short             mPriPosition, mPriCOGSOG, mPriHeadingM, mPriHeadingT, mPriVar, mPriDateTime, mPriWindR, mPriWindT, mPriDepth;
       LogbookItem       mLat, mLon, mCOG, mSOG, mHeadingM, mHeadingT, mSTW, mAWA, mAWS, mTWA, mTWS, mDepth, mTemp, mVar;
+      wxString          m_note;
 
 };
 
@@ -136,6 +150,21 @@ public:
 private:
       wxFilePickerCtrl *m_pFilename;
       wxSpinCtrl       *m_pInterval;
+};
+
+class LogbookUserInput : public wxWindow
+{
+public:
+      LogbookUserInput( wxWindow *pparent, wxWindowID id, logbook_pi *vdr, wxString note );
+      void SetColorScheme( PI_ColorScheme cs );
+      void SetNote( wxString note );
+      void OnButtonOK( wxCommandEvent &event );
+      void OnButtonCancel( wxCommandEvent &event );
+
+private:
+      logbook_pi           *m_plogbook;
+      wxTextCtrl           *m_pnote;
+      wxCheckBox           *m_pimmediately;
 };
 
 #endif

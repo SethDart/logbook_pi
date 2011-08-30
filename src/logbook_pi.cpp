@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id: logbook_pi.cpp, v1.0 2011/03/18 SethDart Exp $
+ * $Id: logbook_pi.cpp, v0.2 2011-05-06 SethDart Exp $
  *
  * Project:  OpenCPN
  * Purpose:  Logbook Plugin
@@ -125,7 +125,11 @@ int logbook_pi::Init(void)
       mPriWindT = 99; // True wind
       mPriDepth = 99;
 
+      m_puserinput = NULL;
+
       AddLocaleCatalog( _T("opencpn-logbook_pi") );
+
+      m_pauimgr = GetFrameAuiManager();
 
       //    Get a pointer to the opencpn configuration object
       m_pconfig = GetOCPNConfigObject();
@@ -133,9 +137,14 @@ int logbook_pi::Init(void)
       //    And load the configuration items
       LoadConfig();
 
+      m_toolbar_item_id  = InsertPlugInTool(_T(""), _img_logbook, _img_logbook, wxITEM_CHECK,
+            _("Logbook"), _T(""), NULL, LOGBOOK_TOOL_POSITION, 0, this);
+
       ApplyConfig();
 
       return (
+           WANTS_TOOLBAR_CALLBACK    |
+           INSTALLS_TOOLBAR_TOOL     |
            WANTS_PREFERENCES         |
            WANTS_CONFIG              |
            WANTS_NMEA_SENTENCES      |
@@ -146,6 +155,8 @@ int logbook_pi::Init(void)
 bool logbook_pi::DeInit(void)
 {
       Stop();
+      CloseUserInput();
+
       return true;
 }
 
@@ -189,6 +200,30 @@ wxString logbook_pi::GetLongDescription()
 {
       return _("Log user defined navigation data at regular interval.");
 
+}
+
+int logbook_pi::GetToolbarToolCount(void)
+{
+      return 1;
+}
+
+void logbook_pi::OnToolbarToolCallback(int id)
+{
+      if ( !m_puserinput )
+      {
+            m_puserinput = new LogbookUserInput( GetOCPNCanvasWindow(), wxID_ANY, this, m_note );
+            wxAuiPaneInfo pane = wxAuiPaneInfo().Name(_T("Logbook")).Caption(_("Logbook")).CaptionVisible(true).Float().FloatingPosition(50,150).Dockable(false).Fixed().CloseButton(false).Show(true);
+            m_pauimgr->AddPane( m_puserinput, pane );
+            m_pauimgr->Update();
+      }
+}
+
+void logbook_pi::SetColorScheme( PI_ColorScheme cs )
+{
+      if ( m_puserinput )
+      {
+            m_puserinput->SetColorScheme( cs );
+      }
 }
 
 void logbook_pi::SetNMEASentence(wxString &sentence)
@@ -650,7 +685,12 @@ void logbook_pi::ApplyConfig(void)
                   wxLogMessage(_T("logbook_pi: Timer start failed!"));
       }
       //TODO: Write header?
-      WriteLogEntry(_T("Date;Lat;Lon;COG;SOG;HDM;HDT;STW;AWA;AWS;TWA;TWS;Depth;Temp"));
+      WriteLogEntry(_T("Date;Lat;Lon;COG;SOG;HDM;HDT;STW;AWA;AWS;TWA;TWS;Depth;Temp;Note"));
+}
+
+void logbook_pi::SetNote( wxString note )
+{
+      m_note = note;
 }
 
 void logbook_pi::Notify()
@@ -673,9 +713,25 @@ void logbook_pi::Notify()
             _T(";")+mTWA.GetFormattedValue(OCPN_LBI_MAIN, _T("%3.0f Deg"), true)+
             _T(";")+mTWS.GetFormattedValue(OCPN_LBI_MAIN, _T("%4.2f Kts"), true)+
             _T(";")+mDepth.GetFormattedValue(OCPN_LBI_MAIN, _T("%3.1f m"), true)+
-            _T(";")+mTemp.GetFormattedValue(OCPN_LBI_MAIN, _T("%2.0f C"), true);
+            _T(";")+mTemp.GetFormattedValue(OCPN_LBI_MAIN, _T("%2.0f C"), true)+
+            _T(";")+m_note;
 
       WriteLogEntry(s);
+
+      m_note = _T("");
+      if ( m_puserinput )
+            m_puserinput->SetNote( m_note );
+}
+
+void logbook_pi::CloseUserInput()
+{
+      if ( m_puserinput )
+      {
+            m_pauimgr->DetachPane( m_puserinput );
+            m_puserinput->Close();
+            m_puserinput->Destroy();
+            m_puserinput = NULL;
+      }
 }
 
 /* LogbookItem
@@ -764,25 +820,42 @@ LogbookPreferencesDialog::LogbookPreferencesDialog( wxWindow *parent, wxWindowID
       wxBoxSizer* itemBoxSizerMainPanel = new wxBoxSizer(wxVERTICAL);
       SetSizer(itemBoxSizerMainPanel);
 
-      wxStaticBox* itemStaticBox = new wxStaticBox( this, wxID_ANY, _("Preferences") );
-      wxStaticBoxSizer* itemStaticBoxSizer = new wxStaticBoxSizer( itemStaticBox, wxHORIZONTAL );
-      itemBoxSizerMainPanel->Add( itemStaticBoxSizer, 0, wxEXPAND|wxALL, 2 );
+      wxStaticBox* itemStaticBox01 = new wxStaticBox( this, wxID_ANY, _("Preferences") );
+      wxStaticBoxSizer* itemStaticBoxSizer01 = new wxStaticBoxSizer( itemStaticBox01, wxHORIZONTAL );
+      itemBoxSizerMainPanel->Add( itemStaticBoxSizer01, 0, wxEXPAND|wxALL, 2 );
 
-      wxFlexGridSizer *itemFlexGridSizer = new wxFlexGridSizer(2);
-      itemFlexGridSizer->AddGrowableCol(1);
-      itemStaticBoxSizer->Add( itemFlexGridSizer, 0, wxGROW|wxALL, 2 );
+      wxFlexGridSizer *itemFlexGridSizer01 = new wxFlexGridSizer(2);
+      itemFlexGridSizer01->AddGrowableCol(1);
+      itemStaticBoxSizer01->Add( itemFlexGridSizer01, 0, wxGROW|wxALL, 2 );
 
       wxStaticText* itemStaticText01 = new wxStaticText( this, wxID_ANY, _("Interval:"), wxDefaultPosition, wxDefaultSize, 0 );
-      itemFlexGridSizer->Add( itemStaticText01, 0, wxEXPAND|wxALL, 2 );
+      itemFlexGridSizer01->Add( itemStaticText01, 0, wxEXPAND|wxALL, 2 );
       m_interval = interval;
       m_pInterval = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 60, interval );
-      itemFlexGridSizer->Add( m_pInterval, 1, wxALIGN_LEFT|wxALL, 2 );
+      itemFlexGridSizer01->Add( m_pInterval, 1, wxALIGN_LEFT|wxALL, 2 );
 
-      wxStaticText* itemStaticText02 = new wxStaticText( this, wxID_ANY, _("Filename:"), wxDefaultPosition, wxDefaultSize, 0 );
-      itemFlexGridSizer->Add( itemStaticText02, 0, wxEXPAND|wxALL, 2 );
+      wxStaticBox* itemStaticBox02 = new wxStaticBox( this, wxID_ANY, _("Logbook") );
+      wxStaticBoxSizer* itemStaticBoxSizer02 = new wxStaticBoxSizer( itemStaticBox02, wxHORIZONTAL );
+      itemBoxSizerMainPanel->Add( itemStaticBoxSizer02, 0, wxEXPAND|wxALL, 2 );
+
+      wxFlexGridSizer *itemFlexGridSizer02 = new wxFlexGridSizer(2);
+      itemFlexGridSizer02->AddGrowableCol(1);
+      itemStaticBoxSizer02->Add( itemFlexGridSizer02, 0, wxGROW|wxALL, 2 );
+
+      wxStaticText* itemStaticText02 = new wxStaticText( this, wxID_ANY, _("Format:"), wxDefaultPosition, wxDefaultSize, 0 );
+      itemFlexGridSizer02->Add( itemStaticText02, 0, wxEXPAND|wxALL, 2 );
+      wxArrayString choices;
+      choices.Add(_("XML"));
+      choices.Add(_("CSV"));
+      wxRadioBox *m_pFormat = new wxRadioBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, choices, 2 );
+      itemFlexGridSizer02->Add( m_pFormat, 1, wxALIGN_LEFT|wxALL, 0 );
+//TODO: OnChange change file select mask
+
+      wxStaticText* itemStaticText03 = new wxStaticText( this, wxID_ANY, _("Filename:"), wxDefaultPosition, wxDefaultSize, 0 );
+      itemFlexGridSizer02->Add( itemStaticText03, 0, wxEXPAND|wxALL, 2 );
       m_filename = filename;
-      m_pFilename = new wxFilePickerCtrl( this, wxID_ANY, filename, _("Select a file"), _T("*.csv"), wxDefaultPosition, wxDefaultSize, wxFLP_SAVE|wxFLP_OVERWRITE_PROMPT|wxFLP_USE_TEXTCTRL );
-      itemFlexGridSizer->Add( m_pFilename, 1, wxALIGN_LEFT|wxALL, 2 );
+      m_pFilename = new wxFilePickerCtrl( this, wxID_ANY, filename, _("Select a file"), _T("*.csv,*.xml"), wxDefaultPosition, wxDefaultSize, wxFLP_SAVE|wxFLP_OVERWRITE_PROMPT|wxFLP_USE_TEXTCTRL );
+      itemFlexGridSizer02->Add( m_pFilename, 1, wxALIGN_LEFT|wxALL, 2 );
 
       wxStdDialogButtonSizer* DialogButtonSizer = CreateStdDialogButtonSizer(wxOK|wxCANCEL);
       itemBoxSizerMainPanel->Add(DialogButtonSizer, 0, wxALIGN_RIGHT|wxALL, 5);
@@ -801,5 +874,75 @@ void LogbookPreferencesDialog::SaveLogbookConfig()
 {
       m_filename = m_pFilename->GetPath();
       m_interval = m_pInterval->GetValue();
+}
+
+//----------------------------------------------------------------
+//
+//    Logbook user interface implementation
+//
+//----------------------------------------------------------------
+
+LogbookUserInput::LogbookUserInput( wxWindow *pparent, wxWindowID id, logbook_pi *logbook, wxString note )
+      :wxWindow( pparent, id, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE, _T("Dashboard") ), m_plogbook(logbook)
+{
+      wxColour cl;
+      GetGlobalColor(_T("DILG1"), &cl);
+      SetBackgroundColour(cl);
+
+      wxBoxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
+      SetSizer( topsizer );
+
+      wxStaticBox* itemStaticBox01 = new wxStaticBox( this, wxID_ANY, _("Notes") );
+      wxStaticBoxSizer* itemStaticBoxSizer01 = new wxStaticBoxSizer( itemStaticBox01, wxHORIZONTAL );
+      topsizer->Add( itemStaticBoxSizer01, 0, wxEXPAND|wxALL, 2 );
+
+      m_pnote = new wxTextCtrl( this, wxID_ANY, note, wxDefaultPosition, wxSize( 200, 100 ), wxTE_MULTILINE );
+      itemStaticBoxSizer01->Add( m_pnote, 0, wxEXPAND|wxALL, 2 );
+
+      m_pimmediately = new wxCheckBox( this, wxID_ANY, _("save immediately") );
+      topsizer->Add( m_pimmediately, 0, wxALL|wxEXPAND, 2 );
+
+      wxButton *btnOK = new wxButton ( this, wxID_OK, _( "OK" ) );
+      btnOK->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( LogbookUserInput::OnButtonOK ), NULL, this );
+      wxButton *btnCancel = new wxButton ( this, wxID_CANCEL, _( "Cancel" ) );
+      btnCancel->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( LogbookUserInput::OnButtonCancel ), NULL, this );
+
+      wxStdDialogButtonSizer *btnsizer = new wxStdDialogButtonSizer();
+      btnsizer->AddButton( btnOK );
+      btnsizer->AddButton( btnCancel );
+      btnsizer->Realize();
+      topsizer->Add( btnsizer, 0, wxALL|wxEXPAND, 2 );
+
+      SetSizer( topsizer );
+      topsizer->Fit( this );
+      Layout();
+}
+
+void LogbookUserInput::SetColorScheme( PI_ColorScheme cs )
+{
+      wxColour cl;
+      GetGlobalColor( _T("DILG1"), &cl );
+      SetBackgroundColour( cl );
+
+      Refresh(false);
+}
+
+void LogbookUserInput::SetNote( wxString note )
+{
+//TODO: do not set if note was updated since
+      m_pnote->SetValue( note );
+}
+
+void LogbookUserInput::OnButtonOK( wxCommandEvent &event )
+{
+      m_plogbook->SetNote( m_pnote->GetValue() );
+      if ( m_pimmediately->IsChecked() )
+            m_plogbook->Notify();
+      m_plogbook->CloseUserInput();
+}
+
+void LogbookUserInput::OnButtonCancel( wxCommandEvent &event )
+{
+      m_plogbook->CloseUserInput();
 }
 
