@@ -57,6 +57,7 @@ ENDIF(WIN32)
 INCLUDE(${wxWidgets_USE_FILE})
 
 FIND_PACKAGE(Gettext REQUIRED)
+FIND_PACKAGE(TinyXML)
 
 # For convenience we define the sources as a variable. You can add
 # header files and cpp/c files and CMake will sort them out
@@ -121,11 +122,29 @@ SET(SRC_NMEA0183
             src/nmea0183/mwd.hpp
             src/nmea0183/vwt.cpp
             src/nmea0183/vwt.hpp
+      )
 
-	)
 INCLUDE_DIRECTORIES(src/nmea0183)
 
 ADD_LIBRARY(${PACKAGE_NAME} SHARED ${SRC_LOGBOOK} ${SRC_NMEA0183} )
+
+SET(SRC_TINYXML
+            src/tinystr.cpp
+            src/tinystr.h
+            src/tinyxml.cpp
+            src/tinyxml.h
+            src/tinyxmlerror.cpp
+            src/tinyxmlparser.cpp
+	)
+
+IF(TINYXML_FOUND)
+    message (STATUS "Building with tinyxml includes")
+    INCLUDE_DIRECTORIES(${TINYXML_INCLUDE_DIR})
+    TARGET_LINK_LIBRARIES(${PACKAGE_NAME} ${TINYXML_LIBRARIES} )
+ELSE(TINYXML_FOUND)
+    message (STATUS "tinyxml library not found")
+    ADD_LIBRARY(${PACKAGE_NAME} SHARED ${SRC_TINYXML} )
+ENDIF(TINYXML_FOUND)
 
 IF(WIN32)
   SET(OPENCPN_IMPORT_LIB "../../${CMAKE_CFG_INTDIR}/${PARENT}")

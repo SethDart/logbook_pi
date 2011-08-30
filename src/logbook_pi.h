@@ -48,6 +48,7 @@
 #include "../../../include/ocpn_plugin.h"
 
 #include "nmea0183/nmea0183.h"
+#include "tinyxml.h"
 
 // Data must be fresher thant this delay to be saved
 #define     DATA_VALIDITY    60
@@ -119,13 +120,16 @@ private:
       bool SaveConfig(void);
       void ApplyConfig(void);
 
-      void WriteLogEntry( wxString entry );
+      void WriteLogEntryCSV(void);
+      TiXmlElement *Item2XML( wxString value, LogbookItem &item, wxString format );
+      void WriteLogEntryXML(void);
 
       wxFileConfig     *m_pconfig;
       wxAuiManager     *m_pauimgr;
       int               m_toolbar_item_id;
       LogbookUserInput *m_puserinput;
       wxString          m_filename;
+      wxString          m_format;
       int               m_interval;
 
       NMEA0183          m_NMEA0183;                 // Used to parse NMEA Sentences
@@ -138,16 +142,18 @@ private:
 class LogbookPreferencesDialog : public wxDialog
 {
 public:
-      LogbookPreferencesDialog( wxWindow *pparent, wxWindowID id, wxString filename, int interval );
+      LogbookPreferencesDialog( wxWindow *pparent, wxWindowID id, int interval, wxString format, wxString filename );
       ~LogbookPreferencesDialog() {}
 
       void OnCloseDialog(wxCloseEvent& event);
       void SaveLogbookConfig();
 
       wxString m_filename;
+      wxString m_format;
       int m_interval;
 
 private:
+      wxRadioBox       *m_pFormat;
       wxFilePickerCtrl *m_pFilename;
       wxSpinCtrl       *m_pInterval;
 };

@@ -36,6 +36,7 @@
 #include <typeinfo>
 #include "logbook_pi.h"
 #include "icons.h"
+#include <wx/filename.h>
 
 // the class factories, used to create and destroy instances of the PlugIn
 
@@ -618,7 +619,7 @@ Calculated wind angle relative to the vessel, 0 to 180o, left/right L/R of vesse
 
 void logbook_pi::ShowPreferencesDialog( wxWindow* parent )
 {
-      LogbookPreferencesDialog *dialog = new LogbookPreferencesDialog( parent, wxID_ANY, m_filename, m_interval );
+      LogbookPreferencesDialog *dialog = new LogbookPreferencesDialog( parent, wxID_ANY, m_interval, m_format, m_filename );
 
       if (dialog->ShowModal() == wxID_OK)
       {
@@ -627,6 +628,7 @@ void logbook_pi::ShowPreferencesDialog( wxWindow* parent )
             dialog->SaveLogbookConfig();
 
             m_filename = dialog->m_filename;
+            m_format = dialog->m_format;
             m_interval = dialog->m_interval;
             SaveConfig();
             ApplyConfig();
@@ -643,6 +645,7 @@ bool logbook_pi::LoadConfig(void)
             pConf->SetPath( _T("/PlugIns/Logbook") );
 
             pConf->Read( _T("Filename"), &m_filename, wxEmptyString );
+            pConf->Read( _T("Format"), &m_format, _T("CSV") );
             pConf->Read( _T("Interval"), &m_interval, -1 );
 
             return true;
@@ -660,6 +663,7 @@ bool logbook_pi::SaveConfig(void)
             pConf->SetPath( _T("/PlugIns/Logbook") );
 
             pConf->Write( _T("Filename"), m_filename );
+            pConf->Write( _T("Format"), m_format );
             pConf->Write( _T("Interval"), m_interval );
 
             return true;
@@ -668,34 +672,18 @@ bool logbook_pi::SaveConfig(void)
             return false;
 }
 
-void logbook_pi::WriteLogEntry( wxString entry )
+void logbook_pi::WriteLogEntryCSV( )
 {
-      wxTextFile file(m_filename);
-      file.Open();
-      file.AddLine(entry);
-      file.Write();
-}
+      wxTextFile file( m_filename );
 
-void logbook_pi::ApplyConfig(void)
-{
-      if ( m_filename != wxEmptyString && m_interval != -1 )
+      if( !file.Exists() )
       {
-            // Transform minutes interval into milliseconds
-            if (! Start( m_interval*60000, wxTIMER_CONTINUOUS ) )
-                  wxLogMessage(_T("logbook_pi: Timer start failed!"));
+            file.Create();
+            file.AddLine( _T("Date;Lat;Lon;COG;SOG;HDM;HDT;STW;AWA;AWS;TWA;TWS;Depth;Temp;Note") );
       }
-      //TODO: Write header?
-      WriteLogEntry(_T("Date;Lat;Lon;COG;SOG;HDM;HDT;STW;AWA;AWS;TWA;TWS;Depth;Temp;Note"));
-}
+      else
+            file.Open();
 
-void logbook_pi::SetNote( wxString note )
-{
-      m_note = note;
-}
-
-void logbook_pi::Notify()
-{
-      //TODO: Write fields
       wxDateTime now = wxDateTime::Now();
       wxString s = now.Format(_T("%c"), wxDateTime::UTC)+_T(";");
       if (mLat.IsValid())
@@ -716,7 +704,109 @@ void logbook_pi::Notify()
             _T(";")+mTemp.GetFormattedValue(OCPN_LBI_MAIN, _T("%2.0f C"), true)+
             _T(";")+m_note;
 
-      WriteLogEntry(s);
+      file.AddLine( s );
+      file.Write();
+      file.Close();
+}
+
+TiXmlElement *logbook_pi::Item2XML( wxString value, LogbookItem &item, wxString format )
+{
+      TiXmlElement *elt = new TiXmlElement( value.mb_str() );
+      if ( item.IsValid() )
+      {
+            elt->SetDoubleAttribute( "value", item.GetValue(OCPN_LBI_MAIN, false) );
+            elt->SetAttribute( "formatted", item.GetFormattedValue(OCPN_LBI_MAIN, format, false).mb_str() );
+            elt->SetDoubleAttribute( "min", item.GetValue(OCPN_LBI_MIN, false) );
+            elt->SetDoubleAttribute( "max", item.GetValue(OCPN_LBI_MAX, false) );
+            elt->SetDoubleAttribute( "avg", item.GetValue(OCPN_LBI_AVG, true) );
+      }
+      return elt;
+}
+
+void logbook_pi::WriteLogEntryXML( )
+{
+      TiXmlDocument doc( m_filename.mb_str() );
+      TiXmlElement *root;
+
+      if( !wxFileName::FileExists( m_filename ) )
+      {
+            TiXmlDeclaration *decl = new TiXmlDeclaration( "1.0", "", "" );
+            doc.LinkEndChild( decl );
+
+            root = new TiXmlElement( "logbook" );
+            doc.LinkEndChild( root );
+            root->SetAttribute("version", "1.0");
+            root->SetAttribute("creator", "OpenCPN");
+      }
+      else
+      {
+            doc.LoadFile();
+            root = doc.RootElement();
+      }
+
+      //element->SetDoubleAttribute("radius", 3.14159);
+
+      TiXmlElement *rec = new TiXmlElement( "record" );
+      wxDateTime now = wxDateTime::Now();
+      rec->SetAttribute( "time", now.FormatISODate().Append(_T("T")).Append(now.FormatISOTime()).Append(_T("Z")).mb_str() );
+      rec->SetAttribute( "epoch", now.Format(_T("%s")).mb_str() );
+      rec->SetAttribute( "human", now.Format(_T("%c"), wxDateTime::UTC).mb_str() );
+      root->LinkEndChild( rec );
+
+      TiXmlElement *elt = new TiXmlElement( "position" );
+      if (mLat.IsValid())
+            elt->SetDoubleAttribute( "lat", mLat.GetValue(OCPN_LBI_MAIN, false) );
+      if (mLon.IsValid())
+            elt->SetDoubleAttribute( "lon", mLon.GetValue(OCPN_LBI_MAIN, false) );
+      if (mLat.IsValid())
+            elt->SetAttribute( "hlat", toSDMM(1, mLat.GetValue(OCPN_LBI_MAIN, true)).mb_str() );
+      if (mLon.IsValid())
+            elt->SetAttribute( "hlon", toSDMM(2, mLon.GetValue(OCPN_LBI_MAIN, true)).mb_str() );
+      rec->LinkEndChild( elt );
+
+      rec->LinkEndChild( Item2XML(_T("COG"), mCOG, _T("%3.0f Deg")) );
+      rec->LinkEndChild( Item2XML(_T("SOG"), mSOG, _T("%4.2f Kts")) );
+      rec->LinkEndChild( Item2XML(_T("HDG"), mHeadingM, _T("%3.0f Deg")) );
+      rec->LinkEndChild( Item2XML(_T("HDT"), mHeadingT, _T("%3.0f Deg")) );
+      rec->LinkEndChild( Item2XML(_T("STW"), mSTW, _T("%4.2f Kts")) );
+      rec->LinkEndChild( Item2XML(_T("AWA"), mAWA, _T("%3.0f Deg")) );
+      rec->LinkEndChild( Item2XML(_T("AWS"), mAWS, _T("%4.2f Kts")) );
+      rec->LinkEndChild( Item2XML(_T("TWA"), mTWA, _T("%3.0f Deg")) );
+      rec->LinkEndChild( Item2XML(_T("TWS"), mTWS, _T("%4.2f Kts")) );
+      rec->LinkEndChild( Item2XML(_T("Depth"), mDepth, _T("%3.1f m")) );
+      rec->LinkEndChild( Item2XML(_T("Temp"), mTemp, _T("%2.0f C")) );
+      //rec->LinkEndChild( Item2XML("", m, ) );
+
+      elt = new TiXmlElement( "Note" );
+      elt->LinkEndChild( new TiXmlText( m_note.mb_str() ) );
+      rec->LinkEndChild( elt );
+
+      doc.SaveFile();
+}
+
+void logbook_pi::ApplyConfig(void)
+{
+      if ( m_filename != wxEmptyString && m_interval != -1 )
+      {
+            // Transform minutes interval into milliseconds
+            if (! Start( m_interval*60000, wxTIMER_CONTINUOUS ) )
+                  wxLogMessage(_T("logbook_pi: Timer start failed!"));
+      }
+}
+
+void logbook_pi::SetNote( wxString note )
+{
+      m_note = note;
+}
+
+void logbook_pi::Notify()
+{
+      //TODO: Write fields
+
+      if ( m_format == _T("XML") )
+            WriteLogEntryXML();
+      else
+            WriteLogEntryCSV();
 
       m_note = _T("");
       if ( m_puserinput )
@@ -779,7 +869,11 @@ bool LogbookItem::IsValid()
 
 double LogbookItem::GetValue(short which, bool reset=false)
 {
-      if (! IsValid()) return LOGBOOK_EMPTY_VALUE;
+      if (! IsValid())
+      {
+            if (reset) Reset();
+            return LOGBOOK_EMPTY_VALUE;
+      }
 
       double ret = LOGBOOK_EMPTY_VALUE;
       switch (which)
@@ -804,7 +898,11 @@ double LogbookItem::GetValue(short which, bool reset=false)
 
 wxString LogbookItem::GetFormattedValue(short which, wxString format, bool reset=false)
 {
-      if (! IsValid()) return wxEmptyString;
+      if (! IsValid())
+      {
+            if (reset) Reset();
+            return wxEmptyString;
+      }
       return wxString::Format(format, GetValue(which, reset));
 }
 
@@ -812,7 +910,7 @@ wxString LogbookItem::GetFormattedValue(short which, wxString format, bool reset
  *
  */
 
-LogbookPreferencesDialog::LogbookPreferencesDialog( wxWindow *parent, wxWindowID id, wxString filename, int interval )
+LogbookPreferencesDialog::LogbookPreferencesDialog( wxWindow *parent, wxWindowID id, int interval, wxString format, wxString filename )
       :wxDialog( parent, id, _("Logbook preferences"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE )
 {
       Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( LogbookPreferencesDialog::OnCloseDialog ), NULL, this );
@@ -845,9 +943,10 @@ LogbookPreferencesDialog::LogbookPreferencesDialog( wxWindow *parent, wxWindowID
       wxStaticText* itemStaticText02 = new wxStaticText( this, wxID_ANY, _("Format:"), wxDefaultPosition, wxDefaultSize, 0 );
       itemFlexGridSizer02->Add( itemStaticText02, 0, wxEXPAND|wxALL, 2 );
       wxArrayString choices;
-      choices.Add(_("XML"));
-      choices.Add(_("CSV"));
-      wxRadioBox *m_pFormat = new wxRadioBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, choices, 2 );
+      choices.Add(_T("XML"));
+      choices.Add(_T("CSV"));
+      m_format = format;
+      m_pFormat = new wxRadioBox( this, wxID_ANY, format, wxDefaultPosition, wxDefaultSize, choices, 2 );
       itemFlexGridSizer02->Add( m_pFormat, 1, wxALIGN_LEFT|wxALL, 0 );
 //TODO: OnChange change file select mask
 
@@ -873,6 +972,7 @@ void LogbookPreferencesDialog::OnCloseDialog(wxCloseEvent& event)
 void LogbookPreferencesDialog::SaveLogbookConfig()
 {
       m_filename = m_pFilename->GetPath();
+      m_format   = m_pFormat->GetStringSelection();
       m_interval = m_pInterval->GetValue();
 }
 
