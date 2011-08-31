@@ -749,7 +749,7 @@ void logbook_pi::WriteLogEntryXML( )
       TiXmlElement *rec = new TiXmlElement( "record" );
       wxDateTime now = wxDateTime::Now();
       rec->SetAttribute( "time", now.FormatISODate().Append(_T("T")).Append(now.FormatISOTime()).Append(_T("Z")).mb_str() );
-      rec->SetAttribute( "epoch", now.Format(_T("%s")).mb_str() );
+//      rec->SetAttribute( "epoch", now.Format(_T("%s")).mb_str() );
       rec->SetAttribute( "human", now.Format(_T("%c"), wxDateTime::UTC).mb_str() );
       root->LinkEndChild( rec );
 
