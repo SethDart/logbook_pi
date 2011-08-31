@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: logbook_pi 2.5.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2011-08-31 01:48+0200\n"
+"POT-Creation-Date: 2011-08-31 15:37+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -39,33 +39,33 @@ msgid "Preferences"
 msgstr ""
 
 #: src/logbook_pi.cpp:929
-msgid "Interval:"
+msgid "Interval (minutes):"
 msgstr ""
 
 #: src/logbook_pi.cpp:943
 msgid "Format:"
 msgstr ""
 
-#: src/logbook_pi.cpp:953
+#: src/logbook_pi.cpp:954
 msgid "Filename:"
 msgstr ""
 
-#: src/logbook_pi.cpp:956
+#: src/logbook_pi.cpp:957
 msgid "Select a file"
 msgstr ""
 
-#: src/logbook_pi.cpp:995
+#: src/logbook_pi.cpp:996
 msgid "Notes"
 msgstr ""
 
-#: src/logbook_pi.cpp:1002
+#: src/logbook_pi.cpp:1003
 msgid "save immediately"
 msgstr ""
 
-#: src/logbook_pi.cpp:1005
+#: src/logbook_pi.cpp:1006
 msgid "OK"
 msgstr ""
 
-#: src/logbook_pi.cpp:1007
+#: src/logbook_pi.cpp:1008
 msgid "Cancel"
 msgstr ""

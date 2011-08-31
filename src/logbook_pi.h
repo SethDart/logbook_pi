@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id: logbook_pi.h, v0.2 2011-05-06 SethDart Exp $
+ * $Id: logbook_pi.h, v0.3 2011-08-31 SethDart Exp $
  *
  * Project:  OpenCPN
  * Purpose:  Logbook Plugin
@@ -36,7 +36,7 @@
 #endif //precompiled headers
 
 #define     PLUGIN_VERSION_MAJOR    0
-#define     PLUGIN_VERSION_MINOR    2
+#define     PLUGIN_VERSION_MINOR    3
 
 #define     MY_API_VERSION_MAJOR    1
 #define     MY_API_VERSION_MINOR    5

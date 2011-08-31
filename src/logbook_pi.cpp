@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id: logbook_pi.cpp, v0.2 2011-05-06 SethDart Exp $
+ * $Id: logbook_pi.cpp, v0.3 2011-08-31 SethDart Exp $
  *
  * Project:  OpenCPN
  * Purpose:  Logbook Plugin
@@ -926,7 +926,7 @@ LogbookPreferencesDialog::LogbookPreferencesDialog( wxWindow *parent, wxWindowID
       itemFlexGridSizer01->AddGrowableCol(1);
       itemStaticBoxSizer01->Add( itemFlexGridSizer01, 0, wxGROW|wxALL, 2 );
 
-      wxStaticText* itemStaticText01 = new wxStaticText( this, wxID_ANY, _("Interval:"), wxDefaultPosition, wxDefaultSize, 0 );
+      wxStaticText* itemStaticText01 = new wxStaticText( this, wxID_ANY, _("Interval (minutes):"), wxDefaultPosition, wxDefaultSize, 0 );
       itemFlexGridSizer01->Add( itemStaticText01, 0, wxEXPAND|wxALL, 2 );
       m_interval = interval;
       m_pInterval = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 60, interval );
@@ -946,7 +946,8 @@ LogbookPreferencesDialog::LogbookPreferencesDialog( wxWindow *parent, wxWindowID
       choices.Add(_T("XML"));
       choices.Add(_T("CSV"));
       m_format = format;
-      m_pFormat = new wxRadioBox( this, wxID_ANY, format, wxDefaultPosition, wxDefaultSize, choices, 2 );
+      m_pFormat = new wxRadioBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, choices, 2 );
+      m_pFormat->SetSelection(format==_T("XML")?0:1);
       itemFlexGridSizer02->Add( m_pFormat, 1, wxALIGN_LEFT|wxALL, 0 );
 //TODO: OnChange change file select mask
 
