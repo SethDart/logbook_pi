@@ -108,7 +108,7 @@ wxString toSDMM ( int NEflag, double a )
 
 
 logbook_pi::logbook_pi(void *ppimgr)
-      : opencpn_plugin(ppimgr), wxTimer(this)
+      : opencpn_plugin_16(ppimgr), wxTimer(this)
 {
       // Create the PlugIn icons
       initialize_images();

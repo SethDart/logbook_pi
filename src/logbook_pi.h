@@ -87,7 +87,7 @@ class LogbookItem
 
 };
 
-class logbook_pi : public opencpn_plugin, wxTimer
+class logbook_pi : public opencpn_plugin_16, wxTimer
 {
 public:
       logbook_pi(void *ppimgr);
