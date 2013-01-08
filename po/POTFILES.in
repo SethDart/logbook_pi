@@ -52,11 +52,9 @@ src/nmea0183/response.hpp
 src/nmea0183/gll.hpp
 src/tinyxml.h
 src/tinyxml.cpp
-src/tinystr.cpp
 src/icons.h
 src/tinyxmlparser.cpp
 src/logbook_pi.h
 src/tinyxmlerror.cpp
 src/icons.cpp
-src/tinystr.h
 src/logbook_pi.cpp
